@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carte avec Clustering de Marqueurs</title>
+
+  <!-- Leaflet CSS pour la carte -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster CSS pour le clustering des marqueurs -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .table-container {
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Requête SQL Personnalisée avec Carte</h1>
+  <input type="text" id="sql-query" placeholder="Entrez votre requête SQL" oninput="clearMarkers()" />
+  <button onclick="executeQuery()">Exécuter la requête</button>
+
+  <div id="map"></div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <!-- Colonnes dynamiques peuplées selon la requête -->
+        </tr>
+      </thead>
+      <tbody id="data-table-body">
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const map = L.map('map').setView([31.7917, -7.0926], 6);  // Coordonnées du Maroc
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+
+    let markers = L.markerClusterGroup();  // Déclare les marqueurs globalement
+
+    // Fonction pour exécuter les requêtes SQL et récupérer les données depuis l'API
+    async function executeQuery() {
+      const sqlQuery = document.getElementById('sql-query').value;
+
+      try {
+        const response = await fetch('http://13.60.169.209:3000/api/query', { // Utiliser l'IP publique de l'EC2
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: sqlQuery })
+        });
+
+        if (!response.ok) throw new Error('Erreur lors de la récupération des données');
+        const data = await response.json();
+        populateTable(data);
+        displayMarkers(data);
+      } catch (error) {
+        console.error(error);
+        alert('Erreur lors de la récupération des données');
+      }
+    }
+
+    // Fonction pour peupler le tableau avec les résultats de la requête
+    function populateTable(data) {
+      const tableBody = document.getElementById('data-table-body');
+      const tableHeader = document.querySelector('thead tr');
+      
+      tableBody.innerHTML = ''; // Effacer les résultats précédents
+      tableHeader.innerHTML = ''; // Effacer l'en-tête précédent
+      
+      if (Array.isArray(data) && data.length > 0) {
+        const headers = Object.keys(data[0]);
+        headers.forEach(header => {
+          const th = document.createElement('th');
+          th.innerText = header;
+          tableHeader.appendChild(th);
+        });
+
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          Object.values(row).forEach(value => {
+            const td = document.createElement('td');
+            td.innerText = value;
+            tr.appendChild(td);
+          });
+          tableBody.appendChild(tr);
+        });
+      } else {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.setAttribute('colspan', '100%');  // Étendre sur toutes les colonnes
+        td.innerText = 'Aucune donnée trouvée';
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+      }
+    }
+
+    // Fonction pour afficher les marqueurs sur la carte
+    function displayMarkers(data) {
+      markers.clearLayers(); // Effacer les anciens marqueurs
+
+      data.forEach(row => {
+        const geom = row.geom ? JSON.parse(row.geom) : null;
+        if (geom && geom.type === 'Point') {
+          const [lon, lat] = geom.coordinates;
+          const marker = L.marker([lat, lon]);
+          markers.addLayer(marker);
+        }
+      });
+
+      map.addLayer(markers); // Ajouter les marqueurs à la carte
+    }
+
+    // Effacer les marqueurs si le champ de saisie est vide
+    function clearMarkers() {
+      if (document.getElementById('sql-query').value === "") {
+        markers.clearLayers(); // Effacer les marqueurs sur la carte
+      }
+    }
+  </script>
+</body>
+</html>
