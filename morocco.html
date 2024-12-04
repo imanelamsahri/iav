@@ -70,7 +70,7 @@
       const sqlQuery = document.getElementById('sql-query').value;
 
       try {
-        const response = await fetch('http://13.60.169.209:3000/api/query', { // Utiliser l'IP publique de l'EC2
+        const response = await fetch('https://13.60.169.209:3000/api/query', { // Utiliser HTTPS
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: sqlQuery })
@@ -139,10 +139,12 @@
 
     // Effacer les marqueurs si le champ de saisie est vide
     function clearMarkers() {
-      if (document.getElementById('sql-query').value === "") {
-        markers.clearLayers(); // Effacer les marqueurs sur la carte
+      const sqlQuery = document.getElementById('sql-query').value;
+      if (!sqlQuery) {
+        markers.clearLayers(); // Effacer les marqueurs si la requête est vide
       }
     }
   </script>
+
 </body>
 </html>
