@@ -36,7 +36,7 @@
     async function executeQuery() {
       const sqlQuery = document.getElementById('sql-query').value;
       try {
-        const response = await fetch('https://your-backend-domain.com/api/query', {
+        const response = await fetch('http://13.60.84.6:3000/api/query', { // Adresse backend EC2
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: sqlQuery })
@@ -68,6 +68,7 @@
           Object.values(row).forEach(value => {
             const td = document.createElement('td');
             td.innerText = value;
+           td.innerText = value;
             tr.appendChild(td);
           });
           tableBody.appendChild(tr);
@@ -88,7 +89,6 @@
       });
       map.addLayer(markers);
     }
-
     function clearMarkers() {
       if (!document.getElementById('sql-query').value) {
         markers.clearLayers();
